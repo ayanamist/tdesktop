@@ -76,7 +76,7 @@ for singlePrefix in pathPrefixes:
     pathPrefix = pathPrefix + os.path.join(rootDir, singlePrefix) + pathSep
 
 environment = {
-    'MAKE_THREADS_CNT': '-j8',
+    'MAKE_THREADS_CNT': '-j2',
     'MACOSX_DEPLOYMENT_TARGET': '10.12',
     'UNGUARDED': '-Werror=unguarded-availability-new',
     'MIN_VER': '-mmacosx-version-min=10.12',
@@ -464,6 +464,7 @@ stage('lzma', """
 win:
     git clone https://github.com/desktop-app/lzma.git
     cd lzma\\C\\Util\\LzmaLib
+!release:
     msbuild LzmaLib.sln /property:Configuration=Debug /property:Platform="$X8664"
 release:
     msbuild LzmaLib.sln /property:Configuration=Release /property:Platform="$X8664"
@@ -491,6 +492,7 @@ win:
         -DCMAKE_C_FLAGS_DEBUG="/MTd /Zi /Ob0 /Od /RTC1" ^
         -DCMAKE_C_FLAGS_RELEASE="/MT /O2 /Ob2 /DNDEBUG" ^
         -DCMAKE_C_FLAGS="/DZLIB_WINAPI"
+!release:
     cmake --build . --config Debug
 release:
     cmake --build . --config Release
@@ -511,6 +513,7 @@ win:
         -A %WIN32X64% ^
         -DWITH_JPEG8=ON ^
         -DPNG_SUPPORTED=OFF
+!release:
     cmake --build . --config Debug
 release:
     cmake --build . --config Release
@@ -543,6 +546,7 @@ mac:
 stage('openssl', """
     git clone -b OpenSSL_1_1_1-stable https://github.com/openssl/openssl openssl
     cd openssl
+!release:
 win32:
     perl Configure no-shared no-tests debug-VC-WIN32
 win64:
@@ -593,7 +597,9 @@ win:
         -DCMAKE_INSTALL_PREFIX=%LIBS_DIR%/local ^
         -DCMAKE_C_FLAGS_DEBUG="/MTd /Zi /Ob0 /Od /RTC1" ^
         -DCMAKE_C_FLAGS_RELEASE="/MT /O2 /Ob2 /DNDEBUG"
+!release:
     cmake --build out --config Debug
+release:
     cmake --build out --config Release
     cmake --install out --config Release
 mac:
@@ -612,6 +618,7 @@ stage('rnnoise', """
     cd out
 win:
     cmake -A %WIN32X64% ..
+!release:
     cmake --build . --config Debug
 release:
     cmake --build . --config Release
@@ -1003,6 +1010,7 @@ win:
         -A %WIN32X64% ^
         -D LIBTYPE:STRING=STATIC ^
         -D FORCE_STATIC_VCRT=ON
+!release:
     cmake --build build --config Debug --parallel
 release:
     cmake --build build --config RelWithDebInfo --parallel
@@ -1056,6 +1064,7 @@ win:
     cd src\\client\\windows
     gyp --no-circular-check breakpad_client.gyp --format=ninja
     cd ..\\..
+!release:
     ninja -C out/Debug%FolderPostfix% common crash_generation_client exception_handler
 release:
     ninja -C out/Release%FolderPostfix% common crash_generation_client exception_handler
@@ -1087,6 +1096,7 @@ mac:
     ZLIB_LIB=$USED_PREFIX/lib/libz.a
     mkdir out
     cd out
+!release:
     mkdir Debug.x86_64
     cd Debug.x86_64
     cmake -G Ninja \
@@ -1145,6 +1155,7 @@ win:
     cd out
     mkdir Debug
     cd Debug
+!release:
     cmake -G Ninja ^
         -DCMAKE_BUILD_TYPE=Debug ^
         -DTG_ANGLE_SPECIAL_TARGET=%SPECIAL_TARGET% ^
@@ -1177,7 +1188,7 @@ win:
 
     SET CONFIGURATIONS=-debug
 release:
-    SET CONFIGURATIONS=-debug-and-release
+    SET CONFIGURATIONS=-release
 win:
     """ + removeDir("\"%LIBS_DIR%\\Qt-5.15.4\"") + """
     SET ANGLE_DIR=%LIBS_DIR%\\tg_angle
@@ -1295,6 +1306,7 @@ win:
     cd out
     mkdir Debug
     cd Debug
+!release:
     cmake -G Ninja \
         -DCMAKE_BUILD_TYPE=Debug \
         -DTG_OWT_BUILD_AUDIO_BACKENDS=OFF \
