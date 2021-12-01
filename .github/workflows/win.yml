@@ -55,7 +55,7 @@ jobs:
       GIT: "https://github.com"
       QT_VER: "5.15.2"
       OPENSSL_VER: "1_1_1"
-      UPLOAD_ARTIFACT: "false"
+      UPLOAD_ARTIFACT: "true"
       ONLY_CACHE: "false"
       MANUAL_CACHING: "0"
       PREPARE_PATH: "Telegram/build/prepare/prepare.py"
@@ -140,10 +140,10 @@ jobs:
 
       - name: LZMA.
         run: |
-          git clone %GIT%/telegramdesktop/lzma.git
+          git clone --depth=1 %GIT%/telegramdesktop/lzma.git
           cd lzma
           cd C\Util\LzmaLib
-          msbuild -m LzmaLib.sln /property:Configuration=Debug
+          msbuild -m LzmaLib.sln /property:Configuration=Release
 
       - name: OpenSSL cache.
         id: cache-openssl
@@ -154,9 +154,9 @@ jobs:
       - name: OpenSSL.
         if: steps.cache-openssl.outputs.cache-hit != 'true'
         run: |
-          git clone -b OpenSSL_%OPENSSL_VER%-stable %GIT%/openssl/openssl.git
+          git clone -b OpenSSL_%OPENSSL_VER%-stable --depth=1 %GIT%/openssl/openssl.git
           cd openssl
-          perl Configure no-shared no-tests debug-VC-WIN32
+          perl Configure no-shared no-tests VC-WIN32
           nmake
           mkdir out.dbg
           move libcrypto.lib out.dbg
@@ -176,23 +176,22 @@ jobs:
 
       - name: Zlib.
         run: |
-          git clone %GIT%/telegramdesktop/zlib.git
+          git clone -b tdesktop --depth=1 %GIT%/telegramdesktop/zlib.git
           cd zlib
-          git checkout tdesktop
           cd contrib\vstudio\vc14
-          msbuild -m zlibstat.vcxproj /property:Configuration=Debug
+          msbuild -m zlibstat.vcxproj /property:Configuration=ReleaseWithoutASM
 
       - name: MozJPEG.
         shell: cmd
         run: |
-          git clone -b v4.0.3 %GIT%/mozilla/mozjpeg.git
+          git clone -b v4.0.3 --depth=1 %GIT%/mozilla/mozjpeg.git
           cd mozjpeg
           cmake . ^
           -G "Visual Studio 16 2019" ^
           -A Win32 ^
           -DWITH_JPEG8=ON ^
           -DPNG_SUPPORTED=OFF
-          cmake --build . --config Debug
+          cmake --build . --config Release
 
       - name: OpenAL Soft cache.
         id: cache-openal
@@ -212,7 +211,7 @@ jobs:
           -D FORCE_STATIC_VCRT=ON ^
           -D ALSOFT_BACKEND_DSOUND=OFF
 
-          msbuild -m OpenAL.vcxproj /property:Configuration=Debug
+          msbuild -m OpenAL.vcxproj /property:Configuration=RelWithDebInfo
 
       - name: Breakpad cache.
         id: cache-breakpad
@@ -226,7 +225,7 @@ jobs:
           GYP_MSVS_VERSION: 2019
         if: steps.cache-breakpad.outputs.cache-hit != 'true'
         run: |
-          git clone https://chromium.googlesource.com/external/gyp
+          git clone --depth=1 https://chromium.googlesource.com/external/gyp
           cd gyp
           SET PATH=%cd%;%PATH%
           git checkout d6c5dd51dc
@@ -239,11 +238,10 @@ jobs:
           git checkout dfcb7b6799
           git apply ../patches/breakpad.diff
           cd src
-          git clone -b release-1.11.0 %GIT%/google/googletest testing
+          git clone -b release-1.11.0 --depth=1 %GIT%/google/googletest testing
           cd client\windows
           call gyp --no-circular-check breakpad_client.gyp --format=ninja
           cd ..\..
-          ninja -C out/Debug common crash_generation_client exception_handler
           ninja -C out/Release common crash_generation_client exception_handler
           cd tools\windows\dump_syms
           call gyp dump_syms.gyp --format=ninja
@@ -259,7 +257,7 @@ jobs:
       - name: Opus.
         if: steps.cache-opus.outputs.cache-hit != 'true'
         run: |
-          git clone -b v1.3.1 %GIT%/xiph/opus.git
+          git clone -b v1.3.1 --depth=1 %GIT%/xiph/opus.git
           cd opus
           git cherry-pick 927de8453c
           cmake -B out . ^
@@ -267,17 +265,16 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=%LibrariesPath%/local/opus ^
           -DCMAKE_C_FLAGS_DEBUG="/MTd /Zi /Ob0 /Od /RTC1" ^
           -DCMAKE_C_FLAGS_RELEASE="/MT /O2 /Ob2 /DNDEBUG"
-          cmake --build out --config Debug
           cmake --build out --config Release
           cmake --install out --config Release
 
       - name: Rnnoise.
         run: |
-          git clone %GIT%/desktop-app/rnnoise.git
+          git clone --depth=1 %GIT%/desktop-app/rnnoise.git
           mkdir rnnoise\out
           cd rnnoise\out
           cmake -A Win32 ..
-          cmake --build . --config Debug
+          cmake --build . --config Release
 
       - name: FFmpeg cache.
         id: cache-ffmpeg
@@ -290,9 +287,8 @@ jobs:
         run: |
           choco install --no-progress -y msys2
 
-          git clone %GIT%/FFmpeg/FFmpeg.git ffmpeg
+          git clone -b release/4.4 --depth=1 %GIT%/FFmpeg/FFmpeg.git ffmpeg
           cd ffmpeg
-          git checkout release/4.4
           set CHERE_INVOKING=enabled_from_arguments
           set MSYS2_PATH_TYPE=inherit
           call c:\tools\msys64\usr\bin\bash --login ../patches/build_ffmpeg_win.sh
@@ -308,21 +304,21 @@ jobs:
       - name: Angle.
         if: steps.cache-angle.outputs.cache-hit != 'true'
         run: |
-          git clone --recursive %GIT%/desktop-app/tg_angle.git
-          mkdir tg_angle\out\Debug
-          cd tg_angle\out\Debug
+          git clone --recursive --depth=1 %GIT%/desktop-app/tg_angle.git
+          mkdir tg_angle\out\Release
+          cd tg_angle\out\Release
           cmake -G Ninja ^
-          -DCMAKE_BUILD_TYPE=Debug ^
+          -DCMAKE_BUILD_TYPE=Release ^
           -DTG_ANGLE_SPECIAL_TARGET=win64 ^
           -DTG_ANGLE_ZLIB_INCLUDE_PATH=%cd%/../../../zlib ../..
           ninja
 
           :: Cleanup.
           cd %LibrariesPath%\tg_angle
-          move out\Debug\tg_angle.lib tg_angle.lib
+          move out\Release\tg_angle.lib tg_angle.lib
           rmdir /S /Q out
-          mkdir out\Debug
-          move tg_angle.lib out\Debug\tg_angle.lib
+          mkdir out\Release
+          move tg_angle.lib out\Release\tg_angle.lib
 
       - name: Qt 5.15.2 cache.
         id: cache-qt
@@ -333,10 +329,9 @@ jobs:
       - name: Configure Qt 5.15.2.
         if: steps.cache-qt.outputs.cache-hit != 'true'
         run: |
-          git clone git://code.qt.io/qt/qt5.git qt_%QT%
+          git clone -b v%QT_VER% --depth=1 git://code.qt.io/qt/qt5.git qt_%QT%
           cd qt_%QT%
           perl init-repository --module-subset=qtbase,qtimageformats,qtsvg
-          git checkout v%QT_VER%
           git submodule update qtbase
           git submodule update qtimageformats
           git submodule update qtsvg
@@ -354,8 +349,7 @@ jobs:
 
           configure ^
           -prefix "%LibrariesPath%\Qt-%QT_VER%" ^
-          -debug ^
-          -force-debug-info ^
+          -release ^
           -opensource ^
           -confirm-license ^
           -static ^
@@ -402,11 +396,11 @@ jobs:
       - name: WebRTC.
         if: steps.cache-webrtc.outputs.cache-hit != 'true'
         run: |
-          git clone --recursive %GIT%/desktop-app/tg_owt.git
-          mkdir tg_owt\out\Debug
-          cd tg_owt\out\Debug
+          git clone --depth=1 --recursive %GIT%/desktop-app/tg_owt.git
+          mkdir tg_owt\out\Release
+          cd tg_owt\out\Release
           cmake -G Ninja ^
-          -DCMAKE_BUILD_TYPE=Debug ^
+          -DCMAKE_BUILD_TYPE=Release ^
           -DTG_OWT_SPECIAL_TARGET=win ^
           -DTG_OWT_BUILD_AUDIO_BACKENDS=OFF ^
           -DTG_OWT_LIBJPEG_INCLUDE_PATH=%cd%/../../../mozjpeg ^
@@ -419,10 +413,10 @@ jobs:
 
           :: Cleanup.
           cd %LibrariesPath%\tg_owt
-          move out\Debug\tg_owt.lib tg_owt.lib
+          move out\Release\tg_owt.lib tg_owt.lib
           rmdir /S /Q out
-          mkdir out\Debug
-          move tg_owt.lib out\Debug\tg_owt.lib
+          mkdir out\Release
+          move tg_owt.lib out\Release\tg_owt.lib
 
       - name: Read defines.
         shell: bash
@@ -448,22 +442,25 @@ jobs:
           cd %REPO_NAME%\Telegram
 
           call configure.bat ^
-          -D TDESKTOP_API_TEST=ON ^
           -D DESKTOP_APP_USE_PACKAGED=OFF ^
-          -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF ^
+          -D DESKTOP_APP_DISABLE_CRASH_REPORTS=ON ^
           -D DESKTOP_APP_NO_PDB=ON ^
+          -D DESKTOP_APP_DISABLE_SPELLCHECK=ON ^
+          -D DESKTOP_APP_DISABLE_AUTOUPDATE=ON ^
+          -D TDESKTOP_API_ID=${{ secrets.TG_API_ID }} ^
+          -D TDESKTOP_API_HASH=${{ secrets.TG_API_HASH }} ^
           %TDESKTOP_BUILD_DEFINE% ^
           -DCMAKE_SYSTEM_VERSION=%SDK%
 
           call vcvars32.bat
           cd ..\out
-          msbuild -m Telegram.sln /nologo /p:Configuration=Debug,Platform=Win32
+          msbuild -m Telegram.sln /nologo /p:Configuration=Release,Platform=Win32
 
       - name: Move artifact.
         if: env.UPLOAD_ARTIFACT == 'true'
         working-directory: ${{ github.workspace }}
         run: |
-          cd %REPO_NAME%\out\Debug
+          cd %REPO_NAME%\out\Release
           mkdir artifact
           move Telegram.exe artifact/
       - uses: actions/upload-artifact@master
@@ -471,4 +468,4 @@ jobs:
         if: env.UPLOAD_ARTIFACT == 'true'
         with:
           name: ${{ env.ARTIFACT_NAME }}
-          path: ${{ env.REPO_NAME }}\out\Debug\artifact\
+          path: ${{ env.REPO_NAME }}\out\Release\artifact\
