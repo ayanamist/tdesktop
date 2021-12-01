@@ -50,6 +50,10 @@ if (WIN32)
     nuget_add_winrt(Telegram)
 endif()
 
+if (MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+endif()
+
 set_target_properties(Telegram PROPERTIES AUTOMOC ON)
 target_prepare_qrc(Telegram)
 
