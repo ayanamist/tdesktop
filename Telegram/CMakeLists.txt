@@ -1432,7 +1432,6 @@ if (WIN32)
     target_link_options(Telegram
     PRIVATE
         /DELAYLOAD:secur32.dll
-        /DELAYLOAD:winmm.dll
         /DELAYLOAD:ws2_32.dll
         /DELAYLOAD:user32.dll
         /DELAYLOAD:gdi32.dll
