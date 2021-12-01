@@ -49,7 +49,6 @@ jobs:
         arch: [Win32, x64]
 
     env:
-      UPLOAD_ARTIFACT: "false"
       ONLY_CACHE: "false"
       PREPARE_PATH: "Telegram/build/prepare/prepare.py"
 
@@ -78,6 +77,39 @@ jobs:
         with:
           submodules: recursive
           path: ${{ env.TBUILD }}\${{ env.REPO_NAME }}
+
+      - name: Modify cmake scripts
+        shell: bash
+        working-directory: ${{ env.TBUILD }}\${{ env.REPO_NAME }}
+        run: |
+          patch -t -l cmake/options_win.cmake << 'EOF'
+          --- options_win.cmake.a 2022-09-18 17:33:18.359920100 +0800
+          +++ options_win.cmake.b 2022-09-18 21:58:49.282254900 +0800
+          @@ -20,7 +20,8 @@
+                  # /Qspectre
+                  /W1
+                  /WX
+          -        /MP     # Enable multi process build.
+          +        /MP1    # Limit one compiler process to avoid out of heap
+          +        /bigobj # scheme.cpp has too many sections.
+                  /EHsc   # Catch C++ exceptions only, extern C functions never throw a C++ exception.
+                  /w14834 # [[nodiscard]]
+                  /w15038 # wrong initialization order
+          @@ -40,10 +41,9 @@
+              )
+          
+              if (build_win64)
+          -        target_compile_options(common_options
+          -        INTERFACE
+          -            /bigobj # scheme.cpp has too many sections.
+          -        )
+          +        # target_compile_options(common_options
+          +        # INTERFACE
+          +        # )
+              else()
+                  # target_compile_options(common_options
+                  # INTERFACE
+          EOF
 
       - name: Python installs.
         run: pip3 install --upgrade pywin32 six
@@ -108,7 +140,7 @@ jobs:
         env:
           GYP_MSVS_OVERRIDE_PATH: 'C:\Program Files\Microsoft Visual Studio\2022\Enterprise\'
           GYP_MSVS_VERSION: 2022
-        run: '%TBUILD%\%REPO_NAME%\Telegram\build\prepare\win.bat skip-release silent'
+        run: '%TBUILD%\%REPO_NAME%\Telegram\build\prepare\win.bat silent'
 
       - name: Read defines.
         shell: bash
@@ -137,23 +169,46 @@ jobs:
 
           call configure.bat ^
           ${{ matrix.arch }} ^
-          -D TDESKTOP_API_TEST=ON ^
-          -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF ^
+          -D DESKTOP_APP_DISABLE_CRASH_REPORTS=ON ^
           -D DESKTOP_APP_NO_PDB=ON ^
+          -D DESKTOP_APP_DISABLE_SPELLCHECK=ON ^
+          -D DESKTOP_APP_DISABLE_AUTOUPDATE=ON ^
+          -D TDESKTOP_API_ID=${{ secrets.TG_API_ID }} ^
+          -D TDESKTOP_API_HASH=${{ secrets.TG_API_HASH }} ^
           %TDESKTOP_BUILD_DEFINE% ^
           -DCMAKE_SYSTEM_VERSION=%SDK%
 
           cd ..\out
-          msbuild -m Telegram.sln /p:Configuration=Debug,Platform=${{ matrix.arch }},DebugSymbols=false,DebugType=none
+          msbuild -m Telegram.sln /p:Configuration=Release,Platform=${{ matrix.arch }},DebugSymbols=false,DebugType=none
 
       - name: Move artifact.
-        if: env.UPLOAD_ARTIFACT == 'true'
+        if: env.ONLY_CACHE == 'false'
         run: |
           mkdir artifact
-          move %TBUILD%\%REPO_NAME%\out\Debug\Telegram.exe artifact/
+          move %TBUILD%\%REPO_NAME%\out\Release\Telegram.exe artifact/${{ env.ARTIFACT_NAME }}.exe
       - uses: actions/upload-artifact@master
         name: Upload artifact.
-        if: env.UPLOAD_ARTIFACT == 'true'
+        if: env.ONLY_CACHE == 'false'
         with:
-          name: ${{ env.ARTIFACT_NAME }}
+          name: ${{ env.ARTIFACT_NAME }}.exe
           path: artifact\
+
+      - name: Create Release
+        if: env.ONLY_CACHE == 'false'
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          artifacts: artifact\*.exe
+          artifactContentType: application/vnd.microsoft.portable-executable
+          body: "https://github.com/telegramdesktop/tdesktop/releases/tag/${{ github.ref_name }}"
+          name:  ${{ github.ref_name }}
+          tag:  ${{ github.ref_name }}
+          commit:  ${{ github.ref_name }}
+          omitBodyDuringUpdate: true
+          omitDraftDuringUpdate: true
+          omitNameDuringUpdate: true
+          omitPrereleaseDuringUpdate: true
+          prerelease: true
+          replacesArtifacts: false
+          draft: false
+          token: ${{ secrets.GITHUB_TOKEN }}
