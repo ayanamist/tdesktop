@@ -1,0 +1,1 @@
+定时检查 https://github.com/telegramdesktop/tdesktop 是否有新的Release并使用自己的patch
