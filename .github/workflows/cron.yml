@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.GH_PAT }}
 
       - uses: fregante/setup-git-user@v1
 
@@ -43,10 +45,4 @@ jobs:
           find .github/workflows/ -type f ! -name win.yml -delete
           git commit -am "Remove all workflows except win.yml"
           git cherry-pick 905ef082^..5b6946d6
-      
-      - name: Push to branch if not exists
-        if: steps.check-branch.outputs.not_found == 'true'
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.GH_PAT }}
-          branch: ${{ steps.fetch.outputs.latest_tag }}
+          git push origin refs/heads/"$latest_tag"
