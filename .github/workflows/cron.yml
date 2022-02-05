@@ -14,23 +14,27 @@ jobs:
       - uses: fregante/setup-git-user@v1
 
       - name: Fetch latest release (including pre-release)
+        id: fetch
         run: |
-          curl -sfL -m 60 ${{ github.api_url }}/repos/telegramdesktop/tdesktop/releases | jq -r '[.[] | select(.draft == false)][0].tag_name' > /tmp/latest_tag
+          curl -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -sfL -m 60 ${{ github.api_url }}/repos/telegramdesktop/tdesktop/releases | jq -r '[.[] | select(.draft == false)][0].tag_name' > /tmp/latest_tag
+          echo ::set-output name=latest_tag::"$(cat /tmp/latest_tag)"
 
       - name: Check if branch exists
         id: check-branch
         run: |
-          echo latest_tag=$(cat /tmp/latest_tag)
-          http_code=$(curl -sL -m 60 -o /tmp/branch.json -w "%{http_code}" ${{ github.api_url }}/repos/${{ github.repository }}/branches/"$(cat /tmp/latest_tag)")
+          http_code=$(curl -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -sL -m 60 -o /tmp/branch.json -w "%{http_code}" ${{ github.api_url }}/repos/${{ github.repository }}/branches/"${{ steps.fetch.outputs.latest_tag }}")
           echo http_code="$http_code"
-          echo ::set-output name=http_code::"$http_code"
           echo "body=$(cat /tmp/branch.json)"
-          echo ::set-output name=message::"$(jq -r '.message' /tmp/branch.json)"
+          branch_not_found=false
+          if [[ "$http_code" == '404' && "$(jq -r '.message' /tmp/branch.json)" == 'Branch not found' ]]; then
+            branch_not_found=true
+          fi
+          echo ::set-output name=not_found::"$branch_not_found"
 
-      - name: Make new branch if not exists
-        if: steps.check-branch.outputs.http_code == '404' && steps.check-branch.outputs.message == 'Branch not found'
+      - name: Checkout new branch if not exists
+        if: steps.check-branch.outputs.not_found == 'true'
         run: |
-          latest_tag=$(cat /tmp/latest_tag)
+          latest_tag="${{ steps.fetch.outputs.latest_tag }}"
           git remote add upstream https://github.com/telegramdesktop/tdesktop.git
           git fetch upstream
           git fetch --unshallow origin
@@ -39,4 +43,10 @@ jobs:
           find .github/workflows/ -type f ! -name win.yml -delete
           git commit -am "Remove all workflows except win.yml"
           git cherry-pick 905ef082..5b6946d6
-          git push origin refs/heads/"$latest_tag"
+      
+      - name: Push to branch if not exists
+        if: steps.check-branch.outputs.not_found == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GH_PAT }}
+          branch: ${{ steps.fetch.outputs.latest_tag }}
