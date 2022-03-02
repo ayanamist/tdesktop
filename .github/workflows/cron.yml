@@ -42,5 +42,5 @@ jobs:
           git checkout -b "$latest_tag"
           find .github/workflows/ -type f ! -name win.yml -delete
           git commit -am "Remove all workflows except win.yml"
-          git cherry-pick 905ef082^..5b6946d6
+          git cherry-pick 5b2e874f^..c33ed4d1
           git push origin refs/heads/"$latest_tag"
