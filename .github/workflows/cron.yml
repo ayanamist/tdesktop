@@ -16,7 +16,7 @@ jobs:
       - name: Check if branch exists
         id: check-branch
         run: |
-          latest_tag=$(curl -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -sfL -m 60 ${{ github.api_url }}/repos/telegramdesktop/tdesktop/releases | jq -r '[.[] | select(.draft == false)][0].tag_name')
+          latest_tag=$(curl -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -sfL -m 60 ${{ github.api_url }}/repos/telegramdesktop/tdesktop/releases/latest | jq -r '.tag_name')
           echo ::set-output name=latest_tag::"$latest_tag"
           http_code=$(curl -H "authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -sL -m 60 -o /tmp/branch.json -w "%{http_code}" ${{ github.api_url }}/repos/${{ github.repository }}/branches/"$latest_tag")
           echo http_code="$http_code"
