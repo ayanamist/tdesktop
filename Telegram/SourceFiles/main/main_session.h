@@ -217,7 +217,7 @@ private:
 	const std::unique_ptr<Support::Helper> _supportHelper;
 
 	std::shared_ptr<Data::CloudImageView> _selfUserpicView;
-	rpl::variable<bool> _premiumPossible = false;
+	rpl::variable<bool> _premiumPossible = true;
 
 	rpl::event_stream<bool> _termsLockChanges;
 	std::unique_ptr<Window::TermsLock> _termsLock;
