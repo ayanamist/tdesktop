@@ -46,10 +46,10 @@ jobs:
 
     strategy:
       matrix:
-        arch: [Win32]
+        arch: [x64]
 
     env:
-      UPLOAD_ARTIFACT: "true"
+      UPLOAD_ARTIFACT: "false"
       ONLY_CACHE: "false"
       PREPARE_PATH: "Telegram/build/prepare/prepare.py"
 
@@ -140,6 +140,12 @@ jobs:
           del /S Libraries\*.pch
           del /S Libraries\*.obj
 
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: env.ONLY_CACHE == 'false'
+        with:
+          limit-access-to-actor: true
+
       - name: Telegram Desktop build.
         if: env.ONLY_CACHE == 'false'
         run: |
@@ -175,6 +181,7 @@ jobs:
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
+        if: env.UPLOAD_ARTIFACT == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -186,6 +193,7 @@ jobs:
       - name: Upload Release Asset
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
+        if: env.UPLOAD_ARTIFACT == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
