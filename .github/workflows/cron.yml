@@ -37,8 +37,8 @@ jobs:
           git fetch upstream
           git fetch --unshallow origin
           git checkout "refs/tags/$latest_tag"
-          git checkout -b "${latest_tag}-my"
+          git checkout -b "${latest_tag}"
           find .github/workflows/ -type f ! -name win.yml -delete
           git commit -am "Remove all workflows except win.yml"
           git cherry-pick 4e39d917e90bd5f8676e352548635973521d462c^..b0e5ccf8a35fd5ce3e5c9fb8d6fde330dfb066df
-          git push origin refs/heads/"${latest_tag}-my"
+          git push origin refs/heads/"${latest_tag}"
