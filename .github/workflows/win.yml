@@ -173,7 +173,6 @@ jobs:
           ${{ matrix.arch }} ^
           -D DESKTOP_APP_DISABLE_CRASH_REPORTS=ON ^
           -D DESKTOP_APP_NO_PDB=ON ^
-          -D DESKTOP_APP_DISABLE_SPELLCHECK=ON ^
           -D DESKTOP_APP_DISABLE_AUTOUPDATE=ON ^
           -D TDESKTOP_API_ID=${{ secrets.TG_API_ID }} ^
           -D TDESKTOP_API_HASH=${{ secrets.TG_API_HASH }} ^
